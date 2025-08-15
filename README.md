@@ -100,7 +100,7 @@ imgui.OnFrame(function() return true end, function()
     if v[0] then
         imgui.SetNextWindowPos(imgui.ImVec2(600,350), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowSize(imgui.ImVec2(300,400), imgui.Cond.FirstUseEver)
-        imgui.Begin("AUTO FILA 2.3 | by NukY", v,
+        imgui.Begin("AUTO FILA | by NukY", v,
             imgui.WindowFlags.NoCollapse +
             imgui.WindowFlags.NoResize
         )
