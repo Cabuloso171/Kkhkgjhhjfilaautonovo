@@ -5,8 +5,6 @@ local delay_ms = imgui.new.int(0)
 local contador_atendimentos = imgui.new.int(0)
 local frases_global = imgui.new.bool(false)
 local regras_auto = imgui.new.bool(false)
-local show_confetti = imgui.new.bool(false)
-local show_ice = imgui.new.bool(false) -- Novo: efeito gelado
 
 local ultimo_a = os.time()
 local ultimo_ac = os.time()
@@ -104,44 +102,6 @@ local largura_onda = 60
 local velocidade = 0.05
 local angulo = 0
 
--- Configuração dos efeitos
-local confetti = {}
-local total_confetti = 200
-for i = 1, total_confetti do
-    local forma = math.random(1, 3)
-    local cor
-    if forma == 1 then -- Círculo (amarelo)
-        cor = imgui.GetColorU32(1.0, 1.0, 0.0, 1.0)
-    elseif forma == 2 then -- Triângulo (vermelho)
-        cor = imgui.GetColorU32(1.0, 0.0, 0.0, 1.0)
-    else -- Quadrado (verde)
-        cor = imgui.GetColorU32(0.0, 1.0, 0.0, 1.0)
-    end
-    
-    table.insert(confetti, {
-        x = math.random(0, 300),
-        y = math.random(-50, -10),
-        velocidade = math.random(10, 30)/10,
-        tamanho = math.random(2, 5),
-        cor = cor,
-        forma = forma
-    })
-end
-
--- Novo: Efeito gelado (flocos de neve)
-local ice_flakes = {}
-local total_ice_flakes = 300
-for i = 1, total_ice_flakes do
-    table.insert(ice_flakes, {
-        x = math.random(0, 300),
-        y = math.random(-50, -10),
-        velocidade = math.random(5, 15)/10,
-        tamanho = math.random(3, 8), -- Flocos maiores
-        oscilacao = math.random() * 2 * math.pi,
-        velocidade_oscilacao = math.random(1, 3)/10
-    })
-end
-
 local float_btn_pos = imgui.ImVec2(50, 50)
 local dragging = false
 local drag_offset = imgui.ImVec2(0,0)
@@ -197,7 +157,7 @@ imgui.OnFrame(function() return true end, function()
         imgui.WindowFlags.AlwaysAutoResize
     )
 
-    if imgui.Button("</>", imgui.ImVec2(40,40)) then
+    if imgui.Button("<|>", imgui.ImVec2(40,40)) then
         v[0] = not v[0]
     end
 
@@ -222,7 +182,7 @@ imgui.OnFrame(function() return true end, function()
     if v[0] then
         -- Aumentando o tamanho da janela
         imgui.SetNextWindowPos(imgui.ImVec2(600,550), imgui.Cond.FirstUseEver)
-        imgui.SetNextWindowSize(imgui.ImVec2(450,450), imgui.Cond.FirstUseEver) -- Tamanho aumentado
+        imgui.SetNextWindowSize(imgui.ImVec2(450,400), imgui.Cond.FirstUseEver)
         imgui.Begin("AUTO FILA | by NukY", v,
             imgui.WindowFlags.NoCollapse +
             imgui.WindowFlags.NoResize
@@ -270,7 +230,7 @@ imgui.OnFrame(function() return true end, function()
         imgui.Spacing()
 
         if imgui.Button("/FA", imgui.ImVec2(150,30)) then
-            sampSendChat("/finalizar atendimento")
+            sampSendChat("/fa")
         end
 
         imgui.Spacing()
@@ -278,13 +238,13 @@ imgui.OnFrame(function() return true end, function()
         imgui.Spacing()
 
         imgui.Text("Frases Globais - Envia frases aleatórias no /a")
-        if imgui.Button("FRASES GLOBAL", imgui.ImVec2(150,30)) then
+        if imgui.Button("FRASES ATENDIMENTO", imgui.ImVec2(150,30)) then
             frases_global[0] = not frases_global[0]
             if frases_global[0] then
-                sampAddChatMessage("[FRASES GLOBAL] Ativado com sucesso!", 0x00FF00)
+                sampAddChatMessage("[FRASES ATENDIMENTO] Ativado com sucesso!", 0x00FF00)
                 ultimo_a = os.time()
             else
-                sampAddChatMessage("[FRASES GLOBAL] Desativado com sucesso!", 0xFFA500)
+                sampAddChatMessage("[FRASES ATENDIMENTO] Desativado com sucesso!", 0xFFA500)
             end
         end
 
@@ -293,123 +253,17 @@ imgui.OnFrame(function() return true end, function()
         imgui.Spacing()
 
         imgui.Text("Auto Regras - Envia as regras no /a a cada 7 minutos")
-        if imgui.Button("AUTO REGRAS", imgui.ImVec2(150,30)) then
+        if imgui.Button("REGRAS SERVIDOR", imgui.ImVec2(150,30)) then
             regras_auto[0] = not regras_auto[0]
             if regras_auto[0] then
-                sampAddChatMessage("[AUTO REGRAS] Ativado com sucesso!", 0x00FF00)
+                sampAddChatMessage("[REGRAS SERVIDOR] Ativado com sucesso!", 0x00FF00)
                 ultimo_ac = os.time()
             else
-                sampAddChatMessage("[AUTO REGRAS] Desativado com sucesso!", 0xFFA500)
-            end
-        end
-
-        imgui.Spacing()
-        imgui.Separator()
-        imgui.Spacing()
-
-        if imgui.Button("CARNAVAL", imgui.ImVec2(150,30)) then
-            show_confetti[0] = not show_confetti[0]
-            if show_confetti[0] then
-                sampAddChatMessage("[CONFETTI] Ativado - Divirta-se!", 0xFFD700)
-            else
-                sampAddChatMessage("[CONFETTI] Desativado", 0xFFA500)
-            end
-        end
-
-        -- Novo botão GELADO
-        if imgui.Button("GELADO", imgui.ImVec2(150,30)) then
-            show_ice[0] = not show_ice[0]
-            if show_ice[0] then
-                sampAddChatMessage("[GELADO] Efeito ativado!", 0x00FFFF)
-            else
-                sampAddChatMessage("[GELADO] Efeito desativado", 0xFFA500)
+                sampAddChatMessage("[REGRAS SERVIDOR] Desativado com sucesso!", 0xFFA500)
             end
         end
 
         imgui.End()
-    end
-
-    -- Efeito Carnaval
-    if show_confetti[0] then
-        local screen_width, screen_height = getScreenResolution()
-        local draw = imgui.GetBackgroundDrawList()
-        
-        for i, c in ipairs(confetti) do
-            c.y = c.y + c.velocidade
-            c.x = c.x + math.sin(c.y * 0.1) * 0.5
-            
-            if c.y > screen_height then
-                c.y = math.random(-50, -10)
-                c.x = math.random(0, screen_width)
-            end
-            
-            if c.forma == 1 then -- Círculo amarelo
-                draw:AddCircleFilled(imgui.ImVec2(c.x, c.y), c.tamanho, c.cor)
-            elseif c.forma == 2 then -- Triângulo vermelho
-                draw:AddTriangleFilled(
-                    imgui.ImVec2(c.x, c.y - c.tamanho),
-                    imgui.ImVec2(c.x - c.tamanho, c.y + c.tamanho),
-                    imgui.ImVec2(c.x + c.tamanho, c.y + c.tamanho),
-                    c.cor
-                )
-            else -- Quadrado verde
-                draw:AddRectFilled(
-                    imgui.ImVec2(c.x - c.tamanho, c.y - c.tamanho),
-                    imgui.ImVec2(c.x + c.tamanho, c.y + c.tamanho),
-                    c.cor
-                )
-            end
-        end
-    end
-
-    -- Novo: Efeito Gelado (flocos de neve brancos)
-    if show_ice[0] then
-        local screen_width, screen_height = getScreenResolution()
-        local draw = imgui.GetBackgroundDrawList()
-        
-        for i, floco in ipairs(ice_flakes) do
-            floco.y = floco.y + floco.velocidade
-            floco.oscilacao = floco.oscilacao + floco.velocidade_oscilacao
-            floco.x = floco.x + math.sin(floco.oscilacao) * 0.8 -- Movimento mais pronunciado
-            
-            if floco.y > screen_height then
-                floco.y = math.random(-50, -10)
-                floco.x = math.random(0, screen_width)
-                floco.tamanho = math.random(3, 8) -- Tamanho variado
-            end
-            
-            -- Desenha o floco como um asterisco (*)
-            local center = imgui.ImVec2(floco.x, floco.y)
-            local size = floco.tamanho
-            
-            -- Linha horizontal
-            draw:AddLine(
-                imgui.ImVec2(floco.x - size, floco.y),
-                imgui.ImVec2(floco.x + size, floco.y),
-                0xFFFFFFFF, 1.5
-            )
-            
-            -- Linha vertical
-            draw:AddLine(
-                imgui.ImVec2(floco.x, floco.y - size),
-                imgui.ImVec2(floco.x, floco.y + size),
-                0xFFFFFFFF, 1.5
-            )
-            
-            -- Linha diagonal 1
-            draw:AddLine(
-                imgui.ImVec2(floco.x - size*0.7, floco.y - size*0.7),
-                imgui.ImVec2(floco.x + size*0.7, floco.y + size*0.7),
-                0xFFFFFFFF, 1.5
-            )
-            
-            -- Linha diagonal 2
-            draw:AddLine(
-                imgui.ImVec2(floco.x - size*0.7, floco.y + size*0.7),
-                imgui.ImVec2(floco.x + size*0.7, floco.y - size*0.7),
-                0xFFFFFFFF, 1.5
-            )
-        end
     end
 end)
 
