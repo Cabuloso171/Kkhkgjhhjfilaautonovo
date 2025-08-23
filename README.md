@@ -9,6 +9,8 @@ local regras_auto = imgui.new.bool(false)
 local ultimo_a = os.time()
 local ultimo_ac = os.time()
 local ultima_frase = 1
+local ultimo_envio_a = os.time()
+local intervalo_a = 360
 
 local frases_aleatorias = {
     "Precisando de uma ajudinha da Staff? Utilize /atendimento! Em casos de ANT-RP use /reportar",
@@ -130,10 +132,10 @@ end)
 
 function mostrarMensagemCarregamento()
     local cores = {
-        0xFFA500FF, -- Amarelo
-        0xADD8E6FF, -- Azul claro
-        0x00FF00FF, -- Verde limão
-        0xFFC0CBFF  -- Rosa
+        0xFFA500FF,
+        0xADD8E6FF,
+        0x00FF00FF,
+        0xFFC0CBFF
     }
     
     for i = 1, 10 do
@@ -180,7 +182,6 @@ imgui.OnFrame(function() return true end, function()
     imgui.End()
 
     if v[0] then
-        -- Aumentando o tamanho da janela
         imgui.SetNextWindowPos(imgui.ImVec2(600,550), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowSize(imgui.ImVec2(450,400), imgui.Cond.FirstUseEver)
         imgui.Begin("AUTO FILA | by NukY", v,
@@ -194,7 +195,6 @@ imgui.OnFrame(function() return true end, function()
         local centroX = size.x/2
         local espacamento = size.y/total_pontos
 
-        -- Efeito DNA apenas
         angulo = angulo + velocidade
         for i=1,total_pontos do
             local offset = (i/total_pontos)*math.pi*2
@@ -273,6 +273,13 @@ function main()
     while true do
         wait(0)
         if isSampAvailable() then
+            if os.time() - ultimo_envio_a >= intervalo_a then
+                local frase_aleatoria = frases_aleatorias[math.random(1, #frases_aleatorias)]
+                sampSendChat("/a " .. frase_aleatoria)
+                ultimo_envio_a = os.time()
+                sampAddChatMessage("[AUTO /A] Frase enviada automaticamente!", 0x00FF00)
+            end
+            
             if spam_fila[0] then
                 sampSendChat("/fila")
                 wait(delay_ms[0])
