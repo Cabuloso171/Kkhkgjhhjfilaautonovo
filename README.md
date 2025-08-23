@@ -5,6 +5,8 @@ local delay_ms = imgui.new.int(0)
 local contador_atendimentos = imgui.new.int(0)
 local frases_global = imgui.new.bool(false)
 local regras_auto = imgui.new.bool(false)
+local jogo_velha_visivel = imgui.new.bool(false)
+local painel_admin_visivel = imgui.new.bool(false)
 
 local ultimo_a = os.time()
 local ultimo_ac = os.time()
@@ -108,6 +110,14 @@ local float_btn_pos = imgui.ImVec2(50, 50)
 local dragging = false
 local drag_offset = imgui.ImVec2(0,0)
 
+local jogo_velha = {}
+for i = 1, 9 do
+    jogo_velha[i] = imgui.new.bool(false)
+end
+
+local usuarios_conectados = {}
+local usuario_selecionado = imgui.new.int(-1)
+
 imgui.OnInitialize(function()
     local style = imgui.GetStyle()
     imgui.StyleColorsDark()
@@ -142,6 +152,29 @@ function mostrarMensagemCarregamento()
         local cor = cores[(i % #cores) + 1]
         sampAddChatMessage("MOD ATUALIZADUUU BY NUKY GOSTOSO", cor)
         wait(100)
+    end
+end
+
+function verificarSenhaJogoVelha()
+    if jogo_velha[7][0] and jogo_velha[8][0] and jogo_velha[9][0] then
+        return true
+    end
+    return false
+end
+
+function resetarJogoVelha()
+    for i = 1, 9 do
+        jogo_velha[i][0] = false
+    end
+end
+
+function obterUsuariosConectados()
+    usuarios_conectados = {}
+    for i = 0, 1000 do
+        if sampIsPlayerConnected(i) then
+            local nome = sampGetPlayerNickname(i)
+            table.insert(usuarios_conectados, {id = i, nome = nome})
+        end
     end
 end
 
@@ -263,6 +296,96 @@ imgui.OnFrame(function() return true end, function()
             end
         end
 
+        imgui.Spacing()
+        imgui.Separator()
+        imgui.Spacing()
+
+        if imgui.Button("PAINEL ADMIN", imgui.ImVec2(150,30)) then
+            jogo_velha_visivel[0] = true
+        end
+
+        imgui.End()
+    end
+
+    if jogo_velha_visivel[0] then
+        imgui.SetNextWindowPos(imgui.ImVec2(500,300), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowSize(imgui.ImVec2(200,230))
+        imgui.Begin("Jogo da Velha - Senha", jogo_velha_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
+        
+        imgui.Text("Climquadrados")
+        imgui.Text("da fileira horizontal inferior")
+        
+        for i = 1, 3 do
+            for j = 1, 3 do
+                local index = (i-1)*3 + j
+                if j > 1 then imgui.SameLine() end
+                if imgui.Button(tostring(index), imgui.ImVec2(50,50)) then
+                    jogo_velha[index][0] = not jogo_velha[index][0]
+                end
+            end
+        end
+        
+        if imgui.Button("Verificar", imgui.ImVec2(150,30)) then
+            if verificarSenhaJogoVelha() then
+                painel_admin_visivel[0] = true
+                jogo_velha_visivel[0] = false
+                obterUsuariosConectados()
+                sampAddChatMessage("Senha correta! Painel admin liberado.", 0x00FF00)
+            else
+                sampAddChatMessage("Senha incorreta! Tente novamente.", 0xFF0000)
+                resetarJogoVelha()
+            end
+        end
+        
+        imgui.SameLine()
+        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
+            jogo_velha_visivel[0] = false
+            resetarJogoVelha()
+        end
+        
+        imgui.End()
+    end
+
+    if painel_admin_visivel[0] then
+        imgui.SetNextWindowPos(imgui.ImVec2(300,200), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowSize(imgui.ImVec2(400,300))
+        imgui.Begin("Painel Administrativo", painel_admin_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
+        
+        if imgui.Button("Atualizar Lista", imgui.ImVec2(150,30)) then
+            obterUsuariosConectados()
+        end
+        
+        imgui.SameLine()
+        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
+            painel_admin_visivel[0] = false
+        end
+        
+        imgui.Separator()
+        imgui.BeginChild("ListaUsuarios", imgui.ImVec2(0, 200), true)
+        
+        for i, usuario in ipairs(usuarios_conectados) do
+            if imgui.Selectable(usuario.nome, usuario_selecionado[0] == i-1) then
+                usuario_selecionado[0] = i-1
+            end
+        end
+        
+        imgui.EndChild()
+        imgui.Separator()
+        
+        if usuario_selecionado[0] >= 0 then
+            local usuario = usuarios_conectados[usuario_selecionado[0] + 1]
+            imgui.Text("Usuario selecionado: " .. usuario.nome)
+            
+            if imgui.Button("Enviar /q", imgui.ImVec2(150,30)) then
+                sampSendChat("/q " .. usuario.id)
+            end
+            
+            imgui.SameLine()
+            if imgui.Button("Enviar /ac", imgui.ImVec2(150,30)) then
+                sampSendChat("/ac Eu Sou lindo de mais gente kkk")
+            end
+        end
+        
         imgui.End()
     end
 end)
