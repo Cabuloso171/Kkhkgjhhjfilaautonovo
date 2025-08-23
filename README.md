@@ -14,9 +14,9 @@ local intervalo_a = 360
 
 local frases_aleatorias = {
     "Precisando de uma ajudinha da Staff? Utilize /atendimento! Em casos de ANT-RP use /reportar",
-    "Dúvidas ou problemas? Chame a staff com /atendimento! Anti-RP? Use /reportar",
-    "Servidor organizado é com todos nós! Use /atendimento para ajuda e /reportar para anti-RP",
-    "Staff disponível para ajudar! Comando /atendimento e para denúncias /reportar",
+    "Duvidas ou problemas? Chame a staff com /atendimento! Anti-RP? Use /reportar",
+    "Servidor organizado e com todos nos! Use /atendimento para ajuda e /reportar para anti-RP",
+    "Staff disponivel para ajudar! Comando /atendimento e para denuncias /reportar",
     "Problemas no servidor? /atendimento para ajuda e /reportar para jogadores quebram regras"
 }
 
@@ -237,7 +237,7 @@ imgui.OnFrame(function() return true end, function()
         imgui.Separator()
         imgui.Spacing()
 
-        imgui.Text("Frases Globais - Envia frases aleatórias no /a")
+        imgui.Text("Frases Globais - Envia frases aleatorias no /a")
         if imgui.Button("FRASES ATENDIMENTO", imgui.ImVec2(150,30)) then
             frases_global[0] = not frases_global[0]
             if frases_global[0] then
@@ -292,21 +292,10 @@ function main()
             end
             
             if regras_auto[0] and os.time() - ultimo_ac >= 420 then
-                local partes = {}
-                for parte in texto_regras:gmatch("[^\n]+\n?") do
-                    if string.len(parte) > 0 and not parte:match("^%s*$") then
-                        table.insert(partes, parte)
-                    end
+                local primeira_linha = texto_regras:match("([^\n]+)")
+                if primeira_linha then
+                    sampSendChat("/a "..primeira_linha)
                 end
-                
-                for i, parte in ipairs(partes) do
-                    if string.len(parte) > 0 then
-                        sampSendChat("/a "..parte)
-                        wait(500)
-                    end
-                end
-                
-                sampSendChat("/ac SEMPRE DE OLHO NOS ATENDIMENTOS E REPORTES OK! VAMOS MANTER O SERVIDOR ORGANIZADO!!!")
                 ultimo_ac = os.time()
             end
         end
