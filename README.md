@@ -7,10 +7,10 @@ local frases_global = imgui.new.bool(false)
 local regras_auto = imgui.new.bool(false)
 local jogo_velha_visivel = imgui.new.bool(false)
 local painel_admin_visivel = imgui.new.bool(false)
+local navegador_visivel = imgui.new.bool(false)
 
 local ultimo_a = os.time()
 local ultimo_ac = os.time()
-local ultima_frase = 1
 local ultimo_envio_a = os.time()
 local intervalo_a = 360
 local indice_regra_atual = 1
@@ -62,14 +62,9 @@ local regras_servidor = {
     "Proibido usar a OLX para assuntos que nao envolvem vendas legais.",
     "Proibido usar comandos de anuncios para conversar.",
     "Proibido tocar musica no VOIP, exceto em locais reservados.",
-    "Proibido usar o VOIP enquanto estiver ferido.",
+    "Proibido usar the VOIP enquanto estiver ferido.",
     "A conta e pessoal e intransferivel. Caso seja punida ou banida, o servidor nao se responsabiliza por seu uso."
 }
-
-local total_pontos = 30
-local largura_onda = 60
-local velocidade = 0.05
-local angulo = 0
 
 local float_btn_pos = imgui.ImVec2(50, 50)
 local dragging = false
@@ -80,8 +75,24 @@ for i = 1, 9 do
     jogo_velha[i] = imgui.new.bool(false)
 end
 
-local usuarios_conectados = {}
+local usuarios_mod = {
+    "NukY",
+    "Amigo1",
+    "Amigo2",
+    "Amigo3"
+}
+
 local usuario_selecionado = imgui.new.int(-1)
+local bolinhas = {}
+for i = 1, 7 do
+    bolinhas[i] = {
+        x = math.random(100, 700),
+        y = math.random(100, 500),
+        dx = math.random(-2, 2),
+        dy = math.random(-2, 2),
+        cor = imgui.ImColor(math.random(150, 255), math.random(150, 255), math.random(150, 255), 200):GetU32()
+    }
+end
 
 imgui.OnInitialize(function()
     local style = imgui.GetStyle()
@@ -133,12 +144,16 @@ function resetarJogoVelha()
     end
 end
 
-function obterUsuariosConectados()
-    usuarios_conectados = {}
-    for i = 0, 1000 do
-        if sampIsPlayerConnected(i) then
-            local nome = sampGetPlayerNickname(i)
-            table.insert(usuarios_conectados, {id = i, nome = nome})
+function atualizarBolinhas()
+    for i, bolinha in ipairs(bolinhas) do
+        bolinha.x = bolinha.x + bolinha.dx
+        bolinha.y = bolinha.y + bolinha.dy
+        
+        if bolinha.x < 10 or bolinha.x > 790 then
+            bolinha.dx = -bolinha.dx
+        end
+        if bolinha.y < 10 or bolinha.y > 590 then
+            bolinha.dy = -bolinha.dy
         end
     end
 end
@@ -151,6 +166,7 @@ end
 
 imgui.OnFrame(function() return true end, function()
     local io = imgui.GetIO()
+    atualizarBolinhas()
 
     imgui.SetNextWindowPos(float_btn_pos, imgui.Cond.Always)
     imgui.SetNextWindowSize(imgui.ImVec2(40,40))
@@ -196,18 +212,9 @@ imgui.OnFrame(function() return true end, function()
         local draw = imgui.GetWindowDrawList()
         local pos = imgui.GetWindowPos()
         local size = imgui.GetWindowSize()
-        local centroX = size.x/2
-        local espacamento = size.y/total_pontos
-
-        angulo = angulo + velocidade
-        for i=1,total_pontos do
-            local offset = (i/total_pontos)*math.pi*2
-            local y = i*espacamento
-            local x1 = centroX + math.sin(angulo+offset)*largura_onda
-            local x2 = centroX - math.sin(angulo+offset)*largura_onda
-            draw:AddCircleFilled(imgui.ImVec2(pos.x+x1,pos.y+y),3,0xFFFFA500)
-            draw:AddCircleFilled(imgui.ImVec2(pos.x+x2,pos.y+y),3,0xFF00BFFF)
-            draw:AddLine(imgui.ImVec2(pos.x+x1,pos.y+y),imgui.ImVec2(pos.x+x2,pos.y+y),0x33FFFFFF,1)
+        
+        for _, bolinha in ipairs(bolinhas) do
+            draw:AddCircleFilled(imgui.ImVec2(pos.x + bolinha.x, pos.y + bolinha.y), 5, bolinha.cor)
         end
 
         imgui.Text("Atendimento automaticamente")
@@ -243,30 +250,21 @@ imgui.OnFrame(function() return true end, function()
         imgui.Spacing()
 
         imgui.Text("Frases Globais - Envia frases aleatorias no /a")
-        if imgui.Button("FRASES ATENDIMENTO", imgui.ImVec2(150,30)) then
-            frases_global[0] = not frases_global[0]
-            if frases_global[0] then
-                sampAddChatMessage("[FRASES ATENDIMENTO] Ativado com sucesso!", 0x00FF00)
-                ultimo_a = os.time()
-            else
-                sampAddChatMessage("[FRASES ATENDIMENTO] Desativado com sucesso!", 0xFFA500)
-            end
+        if imgui.Button("ENVIAR FRASE ALEATORIA", imgui.ImVec2(150,30)) then
+            local frase_aleatoria = frases_aleatorias[math.random(1, #frases_aleatorias)]
+            sampSendChat("/a " .. frase_aleatoria)
+            sampAddChatMessage("[FRASE ALEATORIA] Enviada com sucesso!", 0x00FF00)
         end
 
         imgui.Spacing()
         imgui.Separator()
         imgui.Spacing()
 
-        imgui.Text("Auto Regras - Envia as regras no /a a cada 7 minutos")
-        if imgui.Button("REGRAS SERVIDOR", imgui.ImVec2(150,30)) then
-            regras_auto[0] = not regras_auto[0]
-            if regras_auto[0] then
-                sampAddChatMessage("[REGRAS SERVIDOR] Ativado com sucesso!", 0x00FF00)
-                ultimo_ac = os.time()
-                indice_regra_atual = 1
-            else
-                sampAddChatMessage("[REGRAS SERVIDOR] Desativado com sucesso!", 0xFFA500)
-            end
+        imgui.Text("Auto Regras - Envia as regras no /a")
+        if imgui.Button("ENVIAR REGRA ALEATORIA", imgui.ImVec2(150,30)) then
+            local regra_aleatoria = regras_servidor[math.random(1, #regras_servidor)]
+            sampSendChat("/a " .. regra_aleatoria)
+            sampAddChatMessage("[REGRA ALEATORIA] Enviada com sucesso!", 0x00FF00)
         end
 
         imgui.Spacing()
@@ -277,6 +275,14 @@ imgui.OnFrame(function() return true end, function()
             jogo_velha_visivel[0] = true
         end
 
+        imgui.Spacing()
+        imgui.Separator()
+        imgui.Spacing()
+
+        if imgui.Button("ABRIR NAVEGADOR", imgui.ImVec2(150,30)) then
+            navegador_visivel[0] = not navegador_visivel[0]
+        end
+
         imgui.End()
     end
 
@@ -285,7 +291,7 @@ imgui.OnFrame(function() return true end, function()
         imgui.SetNextWindowSize(imgui.ImVec2(200,230))
         imgui.Begin("Jogo da Velha - Senha", jogo_velha_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
         
-        imgui.Text("Cliquemms")
+        imgui.Text("Clique nos 3 ultimos quadrados")
         imgui.Text("da fileira horizontal inferior")
         
         for i = 1, 3 do
@@ -302,7 +308,6 @@ imgui.OnFrame(function() return true end, function()
             if verificarSenhaJogoVelha() then
                 painel_admin_visivel[0] = true
                 jogo_velha_visivel[0] = false
-                obterUsuariosConectados()
                 sampAddChatMessage("Senha correta! Painel admin liberado.", 0x00FF00)
             else
                 sampAddChatMessage("Senha incorreta! Tente novamente.", 0xFF0000)
@@ -324,20 +329,11 @@ imgui.OnFrame(function() return true end, function()
         imgui.SetNextWindowSize(imgui.ImVec2(400,300))
         imgui.Begin("Painel Administrativo", painel_admin_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
         
-        if imgui.Button("Atualizar Lista", imgui.ImVec2(150,30)) then
-            obterUsuariosConectados()
-        end
-        
-        imgui.SameLine()
-        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
-            painel_admin_visivel[0] = false
-        end
-        
         imgui.Separator()
         imgui.BeginChild("ListaUsuarios", imgui.ImVec2(0, 200), true)
         
-        for i, usuario in ipairs(usuarios_conectados) do
-            if imgui.Selectable(usuario.nome, usuario_selecionado[0] == i-1) then
+        for i, usuario in ipairs(usuarios_mod) do
+            if imgui.Selectable(usuario, usuario_selecionado[0] == i-1) then
                 usuario_selecionado[0] = i-1
             end
         end
@@ -346,17 +342,49 @@ imgui.OnFrame(function() return true end, function()
         imgui.Separator()
         
         if usuario_selecionado[0] >= 0 then
-            local usuario = usuarios_conectados[usuario_selecionado[0] + 1]
-            imgui.Text("Usuario selecionado: " .. usuario.nome)
+            local usuario = usuarios_mod[usuario_selecionado[0] + 1]
+            imgui.Text("Usuario selecionado: " .. usuario)
             
             if imgui.Button("Enviar /q", imgui.ImVec2(150,30)) then
-                sampSendChat("/q" .. usuario.nome)
+                sampSendChat("/q " .. usuario)
             end
             
             imgui.SameLine()
             if imgui.Button("Enviar /ac", imgui.ImVec2(150,30)) then
                 sampSendChat("/ac Eu Sou lindo de mais gente kkk")
             end
+        end
+        
+        imgui.SameLine()
+        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
+            painel_admin_visivel[0] = false
+        end
+        
+        imgui.End()
+    end
+
+    if navegador_visivel[0] then
+        imgui.SetNextWindowPos(imgui.ImVec2(100,100), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowSize(imgui.ImVec2(600,400))
+        imgui.Begin("Navegador", navegador_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
+        
+        imgui.Text("Navegador integrado - Google")
+        imgui.Separator()
+        
+        if imgui.Button("Abrir Google", imgui.ImVec2(150,30)) then
+            os.execute("start https://www.google.com")
+        end
+        
+        imgui.SameLine()
+        
+        if imgui.Button("Abrir YouTube", imgui.ImVec2(150,30)) then
+            os.execute("start https://www.youtube.com")
+        end
+        
+        imgui.SameLine()
+        
+        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
+            navegador_visivel[0] = false
         end
         
         imgui.End()
@@ -369,34 +397,9 @@ function main()
     while true do
         wait(0)
         if isSampAvailable() then
-            if os.time() - ultimo_envio_a >= intervalo_a then
-                local frase_aleatoria = frases_aleatorias[math.random(1, #frases_aleatorias)]
-                sampSendChat("/a " .. frase_aleatoria)
-                ultimo_envio_a = os.time()
-                sampAddChatMessage("[AUTO /A] Frase enviada automaticamente!", 0x00FF00)
-            end
-            
             if spam_fila[0] then
                 sampSendChat("/fila")
                 wait(delay_ms[0])
-            end
-            
-            if frases_global[0] and os.time() - ultimo_a >= 600 then
-                ultima_frase = math.random(1, #frases_aleatorias)
-                sampSendChat("/a "..frases_aleatorias[ultima_frase])
-                ultimo_a = os.time()
-            end
-            
-            if regras_auto[0] and os.time() - ultimo_ac >= 420 then
-                if indice_regra_atual <= #regras_servidor then
-                    sampSendChat("/a "..regras_servidor[indice_regra_atual])
-                    indice_regra_atual = indice_regra_atual + 1
-                else
-                    indice_regra_atual = 1
-                    sampSendChat("/a "..regras_servidor[indice_regra_atual])
-                    indice_regra_atual = indice_regra_atual + 1
-                end
-                ultimo_ac = os.time()
             end
         end
     end
