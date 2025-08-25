@@ -55,7 +55,7 @@ local regras_servidor = {
     "Proibido puxar veiculos vip durante acoes.",
     "Para acoes de TR, o tempo devera ser respeitado, proibido atirar antes da contagem inicial terminar.",
     "Para acoes de Casa roubavel, poderao iniciar trocacao somente no momento que der o anuncio da casa no chat global.",
-    "A corda so pode ser utilizada em acoes de sequestro ou em acoes de banco envolvendo refens, exceto durante troca de tiros. Caso o refem seja um policial, ele so podera ser rendido se estiver sozinho.",
+    "A corda so pode be utilizada em acoes de sequestro ou em acoes de banco envolvendo refens, exceto durante troca de tiros. Caso o refem seja um policial, ele so podera ser rendido se estiver sozinho.",
     "Proibido algemar durante uma trocacao de tiro.",
     "Proibido fechar entradas com veiculos ou qualquer tipo de objetos.",
     "Proibido flood e spam no chat.",
@@ -90,7 +90,7 @@ for i = 1, 7 do
         y = math.random(100, 500),
         dx = math.random(-2, 2),
         dy = math.random(-2, 2),
-        cor = imgui.ImColor(math.random(150, 255), math.random(150, 255), math.random(150, 255), 200):GetU32()
+        cor = 0xFF000000 + math.random(0, 0xFFFFFF)
     }
 end
 
