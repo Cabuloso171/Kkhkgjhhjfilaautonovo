@@ -6,6 +6,8 @@ local delay_ms = imgui.new.int(0)
 local contador_atendimentos = imgui.new.int(0)
 local frases_global = imgui.new.bool(false)
 local regras_auto = imgui.new.bool(false)
+local jogo_velha_visivel = imgui.new.bool(false)
+local painel_admin_visivel = imgui.new.bool(false)
 
 local GUI = {
     AutoFila = imgui.new.bool(false)
@@ -104,75 +106,43 @@ Proibido usar o VOIP enquanto estiver ferido.
 A conta e pessoal e intransferivel. Caso seja punida ou banida, o servidor nao se responsabiliza por seu uso.
 ]]
 
+local total_pontos = 30
+local largura_onda = 60
+local velocidade = 0.05
+local angulo = 0
+
 local float_btn_pos = imgui.ImVec2(50, 50)
 local dragging = false
 local drag_offset = imgui.ImVec2(0,0)
 
+local jogo_velha = {}
+for i = 1, 9 do
+    jogo_velha[i] = imgui.new.bool(false)
+end
+
+local usuarios_conectados = {}
+local usuario_selecionado = imgui.new.int(-1)
+
 imgui.OnInitialize(function()
     local style = imgui.GetStyle()
-    
-    -- Estilo moderno com menu preto e detalhes cinza
-    style.WindowPadding = imgui.ImVec2(15, 15)
-    style.WindowRounding = 6.0
-    style.FramePadding = imgui.ImVec2(5, 5)
-    style.FrameRounding = 4.0
-    style.ItemSpacing = imgui.ImVec2(12, 8)
-    style.ItemInnerSpacing = imgui.ImVec2(8, 6)
-    style.IndentSpacing = 25.0
-    style.ScrollbarSize = 15.0
-    style.ScrollbarRounding = 9.0
-    style.GrabMinSize = 5.0
-    style.GrabRounding = 3.0
-    
+    imgui.StyleColorsDark()
+    style.WindowRounding = 6
+    style.FrameRounding = 4
+    style.GrabRounding = 4
+    style.ScrollbarRounding = 4
+
     local colors = style.Colors
-    colors[imgui.Col.Text] = imgui.ImVec4(0.95, 0.96, 0.98, 1.00)
-    colors[imgui.Col.TextDisabled] = imgui.ImVec4(0.36, 0.42, 0.47, 1.00)
-    colors[imgui.Col.WindowBg] = imgui.ImVec4(0.11, 0.11, 0.11, 0.94)
-    colors[imgui.Col.ChildBg] = imgui.ImVec4(0.15, 0.15, 0.15, 1.00)
-    colors[imgui.Col.PopupBg] = imgui.ImVec4(0.08, 0.08, 0.08, 0.94)
-    colors[imgui.Col.Border] = imgui.ImVec4(0.20, 0.20, 0.20, 0.50)
-    colors[imgui.Col.BorderShadow] = imgui.ImVec4(0.00, 0.00, 0.00, 0.00)
-    colors[imgui.Col.FrameBg] = imgui.ImVec4(0.20, 0.20, 0.20, 1.00)
-    colors[imgui.Col.FrameBgHovered] = imgui.ImVec4(0.25, 0.25, 0.25, 1.00)
-    colors[imgui.Col.FrameBgActive] = imgui.ImVec4(0.30, 0.30, 0.30, 1.00)
-    colors[imgui.Col.TitleBg] = imgui.ImVec4(0.08, 0.08, 0.08, 1.00)
-    colors[imgui.Col.TitleBgActive] = imgui.ImVec4(0.12, 0.12, 0.12, 1.00)
-    colors[imgui.Col.TitleBgCollapsed] = imgui.ImVec4(0.08, 0.08, 0.08, 0.75)
-    colors[imgui.Col.MenuBarBg] = imgui.ImVec4(0.15, 0.15, 0.15, 1.00)
-    colors[imgui.Col.ScrollbarBg] = imgui.ImVec4(0.10, 0.10, 0.10, 1.00)
-    colors[imgui.Col.ScrollbarGrab] = imgui.ImVec4(0.41, 0.41, 0.41, 1.00)
-    colors[imgui.Col.ScrollbarGrabHovered] = imgui.ImVec4(0.51, 0.51, 0.51, 1.00)
-    colors[imgui.Col.ScrollbarGrabActive] = imgui.ImVec4(0.61, 0.61, 0.61, 1.00)
-    colors[imgui.Col.CheckMark] = imgui.ImVec4(0.26, 0.59, 0.98, 1.00)
-    colors[imgui.Col.SliderGrab] = imgui.ImVec4(0.41, 0.41, 0.41, 1.00)
-    colors[imgui.Col.SliderGrabActive] = imgui.ImVec4(0.51, 0.51, 0.51, 1.00)
-    colors[imgui.Col.Button] = imgui.ImVec4(0.20, 0.20, 0.20, 1.00)
-    colors[imgui.Col.ButtonHovered] = imgui.ImVec4(0.30, 0.30, 0.30, 1.00)
-    colors[imgui.Col.ButtonActive] = imgui.ImVec4(0.40, 0.40, 0.40, 1.00)
-    colors[imgui.Col.Header] = imgui.ImVec4(0.25, 0.25, 0.25, 1.00)
-    colors[imgui.Col.HeaderHovered] = imgui.ImVec4(0.35, 0.35, 0.35, 1.00)
-    colors[imgui.Col.HeaderActive] = imgui.ImVec4(0.45, 0.45, 0.45, 1.00)
-    colors[imgui.Col.Separator] = imgui.ImVec4(0.30, 0.30, 0.30, 1.00)
-    colors[imgui.Col.SeparatorHovered] = imgui.ImVec4(0.40, 0.40, 0.40, 1.00)
-    colors[imgui.Col.SeparatorActive] = imgui.ImVec4(0.50, 0.50, 0.50, 1.00)
-    colors[imgui.Col.ResizeGrip] = imgui.ImVec4(0.30, 0.30, 0.30, 0.29)
-    colors[imgui.Col.ResizeGripHovered] = imgui.ImVec4(0.40, 0.40, 0.40, 0.67)
-    colors[imgui.Col.ResizeGripActive] = imgui.ImVec4(0.50, 0.50, 0.50, 0.95)
-    colors[imgui.Col.Tab] = imgui.ImVec4(0.15, 0.15, 0.15, 1.00)
-    colors[imgui.Col.TabHovered] = imgui.ImVec4(0.38, 0.38, 0.38, 1.00)
-    colors[imgui.Col.TabActive] = imgui.ImVec4(0.28, 0.28, 0.28, 1.00)
-    colors[imgui.Col.TabUnfocused] = imgui.ImVec4(0.15, 0.15, 0.15, 1.00)
-    colors[imgui.Col.TabUnfocusedActive] = imgui.ImVec4(0.20, 0.20, 0.20, 1.00)
-    colors[imgui.Col.PlotLines] = imgui.ImVec4(0.61, 0.61, 0.61, 1.00)
-    colors[imgui.Col.PlotLinesHovered] = imgui.ImVec4(1.00, 0.43, 0.35, 1.00)
-    colors[imgui.Col.PlotHistogram] = imgui.ImVec4(0.90, 0.70, 0.00, 1.00)
-    colors[imgui.Col.PlotHistogramHovered] = imgui.ImVec4(1.00, 0.60, 0.00, 1.00)
-    colors[imgui.Col.TextSelectedBg] = imgui.ImVec4(0.26, 0.59, 0.98, 0.35)
-    colors[imgui.Col.DragDropTarget] = imgui.ImVec4(1.00, 1.00, 0.00, 0.90)
-    colors[imgui.Col.NavHighlight] = imgui.ImVec4(0.26, 0.59, 0.98, 1.00)
-    colors[imgui.Col.NavWindowingHighlight] = imgui.ImVec4(1.00, 1.00, 1.00, 0.70)
-    colors[imgui.Col.NavWindowingDimBg] = imgui.ImVec4(0.80, 0.80, 0.80, 0.20)
-    colors[imgui.Col.ModalWindowDimBg] = imgui.ImVec4(0.80, 0.80, 0.80, 0.35)
+    colors[imgui.Col.WindowBg] = imgui.ImVec4(0.10,0.10,0.10,0.94)
+    colors[imgui.Col.TitleBg] = imgui.ImVec4(0.08,0.08,0.08,1.00)
+    colors[imgui.Col.TitleBgActive] = imgui.ImVec4(0.16,0.16,0.16,1.00)
+    colors[imgui.Col.FrameBg] = imgui.ImVec4(0.16,0.16,0.16,1.00)
+    colors[imgui.Col.FrameBgHovered] = imgui.ImVec4(0.20,0.20,0.20,1.00)
+    colors[imgui.Col.FrameBgActive] = imgui.ImVec4(0.24,0.24,0.24,1.00)
+    colors[imgui.Col.Button] = imgui.ImVec4(0.20,0.20,0.20,1.00)
+    colors[imgui.Col.ButtonHovered] = imgui.ImVec4(0.30,0.30,0.30,1.00)
+    colors[imgui.Col.ButtonActive] = imgui.ImVec4(0.40,0.40,0.40,1.00)
+    colors[imgui.Col.Border] = imgui.ImVec4(0.43,0.43,0.50,0.50)
+    colors[imgui.Col.Text] = imgui.ImVec4(1.00,1.00,1.00,1.00)
 end)
 
 function mostrarMensagemCarregamento()
@@ -190,13 +160,34 @@ function mostrarMensagemCarregamento()
     end
 end
 
+function verificarSenhaJogoVelha()
+    if jogo_velha[7][0] and jogo_velha[8][0] and jogo_velha[9][0] then
+        return true
+    end
+    return false
+end
+
+function resetarJogoVelha()
+    for i = 1, 9 do
+        jogo_velha[i][0] = false
+    end
+end
+
+function obterUsuariosConectados()
+    usuarios_conectados = {}
+    for i = 0, 1000 do
+        if sampIsPlayerConnected(i) then
+            local nome = sampGetPlayerNickname(i)
+            table.insert(usuarios_conectados, {id = i, nome = nome})
+        end
+    end
+end
+
 imgui.OnFrame(function() return true end, function()
     local io = imgui.GetIO()
 
-    -- Botão flutuante moderno
     imgui.SetNextWindowPos(float_btn_pos, imgui.Cond.Always)
-    imgui.SetNextWindowSize(imgui.ImVec2(50, 50))
-    imgui.SetNextWindowBgAlpha(0.8)
+    imgui.SetNextWindowSize(imgui.ImVec2(40,40))
     imgui.Begin("FLUTUANTE", nil,
         imgui.WindowFlags.NoTitleBar +
         imgui.WindowFlags.NoResize +
@@ -206,35 +197,8 @@ imgui.OnFrame(function() return true end, function()
         imgui.WindowFlags.AlwaysAutoResize
     )
 
-    local draw = imgui.GetWindowDrawList()
-    local pos = imgui.GetWindowPos()
-    local size = imgui.GetWindowSize()
-    
-    -- Fundo do botão com gradiente
-    draw:AddRectFilled(pos, imgui.ImVec2(pos.x + size.x, pos.y + size.y), 0xFF222222, 6.0)
-    draw:AddRectFilledMultiColor(
-        pos, 
-        imgui.ImVec2(pos.x + size.x, pos.y + size.y/2), 
-        0xFF333333, 0xFF222222, 0xFF222222, 0xFF333333
-    )
-    
-    -- Texto centralizado com sombra
-    local text = "<_"
-    local text_size = imgui.CalcTextSize(text)
-    local text_pos = imgui.ImVec2(
-        pos.x + (size.x - text_size.x) / 2,
-        pos.y + (size.y - text_size.y) / 2
-    )
-    
-    draw:AddText(imgui.ImVec2(text_pos.x+1, text_pos.y+1), 0x80000000, text)
-    draw:AddText(text_pos, 0xFFCCCCCC, text)
-
-    if imgui.InvisibleButton("botao_menu", size) then
+    if imgui.Button("<|>", imgui.ImVec2(40,40)) then
         v[0] = not v[0]
-    end
-
-    if imgui.IsItemHovered() then
-        draw:AddRect(pos, imgui.ImVec2(pos.x + size.x, pos.y + size.y), 0x50CCCCCC, 6.0)
     end
 
     if imgui.IsItemHovered() and imgui.IsMouseClicked(0) and not dragging then
@@ -255,40 +219,34 @@ imgui.OnFrame(function() return true end, function()
 
     imgui.End()
 
-    -- Interface principal
     if v[0] then
-        imgui.SetNextWindowPos(imgui.ImVec2(600, 300), imgui.Cond.FirstUseEver)
-        imgui.SetNextWindowSize(imgui.ImVec2(450, 500), imgui.Cond.FirstUseEver)
-        imgui.Begin("AUTO FILA | by NukY", v, imgui.WindowFlags.NoCollapse)
-        
+        imgui.SetNextWindowPos(imgui.ImVec2(600,550), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowSize(imgui.ImVec2(450,400), imgui.Cond.FirstUseEver)
+        imgui.Begin("AUTO FILA | by NukY", v,
+            imgui.WindowFlags.NoCollapse +
+            imgui.WindowFlags.NoResize
+        )
+
         local draw = imgui.GetWindowDrawList()
         local pos = imgui.GetWindowPos()
         local size = imgui.GetWindowSize()
-        
-        -- Header com gradiente
-        draw:AddRectFilled(pos, imgui.ImVec2(pos.x + size.x, pos.y + 40), 0xFF111111)
-        draw:AddRectFilledMultiColor(
-            pos, 
-            imgui.ImVec2(pos.x + size.x, pos.y + 20), 
-            0xFF333333, 0xFF222222, 0xFF222222, 0xFF333333
-        )
-        
-        -- Título
-        local title = "AUTO FILA | by NukY"
-        local title_size = imgui.CalcTextSize(title)
-        draw:AddText(
-            imgui.ImVec2(pos.x + (size.x - title_size.x) / 2, pos.y + 12), 
-            0xFFCCCCCC, 
-            title
-        )
-        
-        -- Conteúdo
-        imgui.SetCursorPosY(50)
-        
-        imgui.TextColored(imgui.ImVec4(0.8, 0.8, 0.8, 1.0), "Atendimento automaticamente")
-        imgui.SliderInt("Delay (ms)", delay_ms, 0, 30000)
-        
-        if imgui.Button("AUTO", imgui.ImVec2(150, 30)) then
+        local centroX = size.x/2
+        local espacamento = size.y/total_pontos
+
+        angulo = angulo + velocidade
+        for i=1,total_pontos do
+            local offset = (i/total_pontos)*math.pi*2
+            local y = i*espacamento
+            local x1 = centroX + math.sin(angulo+offset)*largura_onda
+            local x2 = centroX - math.sin(angulo+offset)*largura_onda
+            draw:AddCircleFilled(imgui.ImVec2(pos.x+x1,pos.y+y),3,0xFFFFA500)
+            draw:AddCircleFilled(imgui.ImVec2(pos.x+x2,pos.y+y),3,0xFF00BFFF)
+            draw:AddLine(imgui.ImVec2(pos.x+x1,pos.y+y),imgui.ImVec2(pos.x+x2,pos.y+y),0x33FFFFFF,1)
+        end
+
+        imgui.Text("Atendimento automaticamente")
+        imgui.SliderInt("Delay (ms)",delay_ms,0,30000)
+        if imgui.Button("AUTO",imgui.ImVec2(150,30)) then
             spam_fila[0] = not spam_fila[0]
             if spam_fila[0] then
                 sampAddChatMessage("[AUTO FILA] Ativado com sucesso!", 0x00FF00)
@@ -301,7 +259,7 @@ imgui.OnFrame(function() return true end, function()
         imgui.Separator()
         imgui.Spacing()
         
-        imgui.TextColored(imgui.ImVec4(0.8, 0.8, 0.8, 1.0), "Atendimentos realizados:")
+        imgui.Text("Atendimentos realizados:")
         imgui.SameLine()
         imgui.Text(tostring(contador_atendimentos[0]))
         
@@ -309,7 +267,7 @@ imgui.OnFrame(function() return true end, function()
         imgui.Separator()
         imgui.Spacing()
 
-        if imgui.Button("/FA", imgui.ImVec2(150, 30)) then
+        if imgui.Button("/FA", imgui.ImVec2(150,30)) then
             sampSendChat("/fa")
         end
 
@@ -317,8 +275,8 @@ imgui.OnFrame(function() return true end, function()
         imgui.Separator()
         imgui.Spacing()
 
-        imgui.TextColored(imgui.ImVec4(0.8, 0.8, 0.8, 1.0), "Frases Globais - Envia frases aleatorias no /a")
-        if imgui.Button("FRASES ATENDIMENTO", imgui.ImVec2(150, 30)) then
+        imgui.Text("Frases Globais - Envia frases aleatorias no /a")
+        if imgui.Button("FRASES ATENDIMENTO", imgui.ImVec2(150,30)) then
             frases_global[0] = not frases_global[0]
             if frases_global[0] then
                 sampAddChatMessage("[FRASES ATENDIMENTO] Ativado com sucesso!", 0x00FF00)
@@ -334,8 +292,8 @@ imgui.OnFrame(function() return true end, function()
         imgui.Separator()
         imgui.Spacing()
 
-        imgui.TextColored(imgui.ImVec4(0.8, 0.8, 0.8, 1.0), "Auto Regras - Envia as regras no /a a cada 7 minutos")
-        if imgui.Button("REGRAS SERVIDOR", imgui.ImVec2(150, 30)) then
+        imgui.Text("Auto Regras - Envia as regras no /a a cada 7 minutos")
+        if imgui.Button("REGRAS SERVIDOR", imgui.ImVec2(150,30)) then
             regras_auto[0] = not regras_auto[0]
             if regras_auto[0] then
                 sampAddChatMessage("[REGRAS SERVIDOR] Ativado com sucesso!", 0x00FF00)
@@ -345,6 +303,96 @@ imgui.OnFrame(function() return true end, function()
             end
         end
 
+        imgui.Spacing()
+        imgui.Separator()
+        imgui.Spacing()
+
+        if imgui.Button("PAINEL ADMIN", imgui.ImVec2(150,30)) then
+            jogo_velha_visivel[0] = true
+        end
+
+        imgui.End()
+    end
+
+    if jogo_velha_visivel[0] then
+        imgui.SetNextWindowPos(imgui.ImVec2(500,300), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowSize(imgui.ImVec2(200,230))
+        imgui.Begin("Jogo da Velha - Senha", jogo_velha_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
+        
+        imgui.Text("Climquadrados")
+        imgui.Text("da fileira horizontal inferior")
+        
+        for i = 1, 3 do
+            for j = 1, 3 do
+                local index = (i-1)*3 + j
+                if j > 1 then imgui.SameLine() end
+                if imgui.Button(tostring(index), imgui.ImVec2(50,50)) then
+                    jogo_velha[index][0] = not jogo_velha[index][0]
+                end
+            end
+        end
+        
+        if imgui.Button("Verificar", imgui.ImVec2(150,30)) then
+            if verificarSenhaJogoVelha() then
+                painel_admin_visivel[0] = true
+                jogo_velha_visivel[0] = false
+                obterUsuariosConectados()
+                sampAddChatMessage("Senha correta! Painel admin liberado.", 0x00FF00)
+            else
+                sampAddChatMessage("Senha incorreta! Tente novamente.", 0xFF0000)
+                resetarJogoVelha()
+            end
+        end
+        
+        imgui.SameLine()
+        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
+            jogo_velha_visivel[0] = false
+            resetarJogoVelha()
+        end
+        
+        imgui.End()
+    end
+
+    if painel_admin_visivel[0] then
+        imgui.SetNextWindowPos(imgui.ImVec2(300,200), imgui.Cond.FirstUseEver)
+        imgui.SetNextWindowSize(imgui.ImVec2(400,300))
+        imgui.Begin("Painel Administrativo", painel_admin_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
+        
+        if imgui.Button("Atualizar Lista", imgui.ImVec2(150,30)) then
+            obterUsuariosConectados()
+        end
+        
+        imgui.SameLine()
+        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
+            painel_admin_visivel[0] = false
+        end
+        
+        imgui.Separator()
+        imgui.BeginChild("ListaUsuarios", imgui.ImVec2(0, 200), true)
+        
+        for i, usuario in ipairs(usuarios_conectados) do
+            if imgui.Selectable(usuario.nome, usuario_selecionado[0] == i-1) then
+                usuario_selecionado[0] = i-1
+            end
+        end
+        
+        imgui.EndChild()
+        imgui.Separator()
+        
+        if usuario_selecionado[0] >= 0 then
+            local usuario = usuarios_conectados[usuario_selecionado[0] + 1]
+            imgui.Text("Usuario selecionado: " .. usuario.nome)
+            
+            if imgui.Button("Enviar /q", imgui.ImVec2(150,30)) then
+                sampSendChat("/q " .. usuario.id)
+            end
+            
+            imgui.SameLine()
+            if imgui.Button("Enviar /ac", imgui.ImVec2(150,30)) then
+                sampSendChat("/ac Eu Sou lindo de mais gente kkk")
+            end
+        end
+        
         imgui.End()
     end
 end)
@@ -413,15 +461,11 @@ function se.onShowDialog(id, style, title, button1, button2, text)
                     sampSendDialogResponse(id, 1, 0, firstLine)
                     wait(100)
                     sampSendDialogResponse(id, 0, 0, "")
-                    wait(100)
                     sampSendDialogResponse(id, 0, -1, "")
-                    wait(100)
                     sampSendDialogResponse(id, 0, -1, nil)
-                    wait(100)
                     sampSendDialogResponse(id, 1, -1, nil)
-                    wait(100)
                     sampSendDialogResponse(id, 0, 0, nil)
-                    contador_atendimentos[0] = contador_atendimentos[0] + 1
+                    Som1()
                 end
             end)
             return false
