@@ -219,7 +219,7 @@ imgui.OnFrame(function() return true end, function()
     )
     
     -- Texto centralizado com sombra
-    local text = "MENU"
+    local text = "<_"
     local text_size = imgui.CalcTextSize(text)
     local text_pos = imgui.ImVec2(
         pos.x + (size.x - text_size.x) / 2,
