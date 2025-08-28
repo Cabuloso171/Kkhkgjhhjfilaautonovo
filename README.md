@@ -30,7 +30,7 @@ local frases_aleatorias = {
     "Problemas no servidor? /atendimento para ajuda e /reportar para jogadores quebram regras"
 }
 
-local texto_regras = {
+local texto_regras = [[
 "Proibido comercio externo incluindo a venda de coins dinheiro veiculos casas empresas skins acessorios ou contas",
 "Proibido usar nicks ofensivos ou improprios.",
 "Proibido o uso de contas secundarias para farmar bens, itens ou dinheiro Transferencias entre contas nao sao permitidas.",
@@ -64,7 +64,7 @@ local texto_regras = {
 "Proibido tocar musica no VOIP exceto em locais reservados
 Proibido usar o VOIP enquanto estiver ferido.",
 "A conta e pessoal e intransferivel. Caso seja punida ou banida, o servidor nao se responsabiliza por seu uso.",
-}
+]]
 
 local total_pontos = 30
 local largura_onda = 60
