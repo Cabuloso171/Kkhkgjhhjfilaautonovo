@@ -13,54 +13,6 @@ local u8 = encoding.UTF8
 
 local GUI = { AutoFila = imgui.new.bool(false) }
 
-local ultimo_a = os.time()
-local ultimo_ac = os.time()
-local ultima_frase = 1
-local ultimo_envio_a = os.time()
-local intervalo_a = 360
-
-local frases_aleatorias = {
-    "Precisando de uma ajudinha da Staff? Utilize /atendimento! Em casos de ANT-RP use /reportar",
-    "Duvidas ou problemas? Chame a staff com /atendimento! Anti-RP? Use /reportar",
-    "Chegou Agora na cidade nao sabe oq fazer! use /Atendimento e fale com um staff Foi vitma de ante rp use /reportar",
-    "Problemas no servidor? /atendimento para ajuda e /reportar para jogadores quebram regras"
-}
-
-local texto_regras = [[
-"Proibido comercio externo incluindo a venda de coins dinheiro veiculos casas empresas skins acessorios ou contas",
-"Proibido usar nicks ofensivos ou improprios.",
-"Proibido o uso de contas secundarias para farmar bens, itens ou dinheiro Transferencias entre contas nao sao permitidas.",
-"Proibido ofender jogadores, a administracao ou o servidor.",
-"Proibido qualquer tipo de discriminacao preconceito homofobia xenofobia ou atos que prejudiquem a imagem de alguem.",
-"Proibido explorar bugs ou lags para obter vantagens.",
-"Proibido usar modificacoes ou trapacas que tragam beneficios indevidos.",
-"Proibido abordar /ab em locais safes exceto policiais.",
-"Proibido o uso de sniper exceto em territorios e invasoes de favelas.",
-"Proibido spawn kill matar jogadores ao entrar/sair de interiores ou favelas em abordagens.",
-"Proibido usar taser em trocas de tiros.",
-"Proibido fazer acao de patrulhamento solo obrigatorio a presenca de dois ou mais policiais da mesma corporacao.",
-"Proibido o uso de bombas C4 com intuito de matar outros players",
-"Proibido o uso de mina terrestre em eventos",
-"Proibido iniciar acao de loja com menos de 3 jogadores",
-"Proibido iniciar qualquer tipo de acao/saquear contra policiais mecanicos e samus fardados.",
-"Lideres e Sub-lideres tem obrigacao de manter atividades dentro da cidade caso ambos fiquem 3 dias ou mais ausentes a org/corp sera resetada.",
-"Proibido correr para uma area safe/interior ou favela apos ter sido iniciado uma acao fora dela/ab ou trocacao de tiro.",
-"Proibido a utilizacao de JBL em area safe.",
-"Proibido portar armas medias/pesadas cometer crimes e/ou intervir em acoes criminosas a paisana.",
-"Proibido apreender barraquinhas em areas de desmanche/favela exceto em dominacao de favela.",
-"Proibido a cobranca de qualquer valor/item para efetuar o recrutamento de um player seja corporacao organizacao hospital e/ou mecanica.",
-"Proibido a utilizacao de motivos invalidos para /algemar obrigatorio um motivo coerente.",
-"Proibido puxar veiculos vip durante acoes.",
-"Para acoes de TR o tempo devera ser respeitado proibido atirar antes da contagem inicial terminar.",
-"Para acoes de Casa roubavel poderao iniciar trocacao somente no momento que der o anuncio da casa no chat global.",
-"Proibido algemar durante uma trocacao de tiro.",
-"Proibido fechar entradas com veiculos ou qualquer tipo de objetos.",
-"Proibido usar a OLX para assuntos que nao envolvem vendas legais.",
-"Proibido usar comandos de anuncios para conversar.",
-"Proibido tocar musica no VOIP exceto em locais reservados Proibido usar o VOIP enquanto estiver ferido.",
-"A conta e pessoal e intransferivel. Caso seja punida ou banida, o servidor nao se responsabiliza por seu uso.",
-]]
-
 local float_btn_pos = imgui.ImVec2(50, 50)
 local dragging = false
 local drag_offset = imgui.ImVec2(0,0)
@@ -87,7 +39,7 @@ imgui.OnInitialize(function()
     colors[imgui.Col.ButtonHovered] = imgui.ImVec4(0.25,0.25,0.25,1.00)
     colors[imgui.Col.ButtonActive] = imgui.ImVec4(0.35,0.35,0.35,1.00)
     colors[imgui.Col.Border] = imgui.ImVec4(0.33,0.33,0.33,0.50)
-    colors[imgui.Col.Text] = imgui.ImVec4(0.85,0.85,0.85,1.00) -- Cinza claro
+    colors[imgui.Col.Text] = imgui.ImVec4(0.85,0.85,0.85,1.00)
     colors[imgui.Col.CheckMark] = imgui.ImVec4(0.85,0.85,0.85,1.00)
     colors[imgui.Col.SliderGrab] = imgui.ImVec4(0.60,0.60,0.60,1.00)
     colors[imgui.Col.SliderGrabActive] = imgui.ImVec4(0.85,0.85,0.85,1.00)
@@ -98,7 +50,7 @@ function create_particle(pos_x, pos_y, window_size_x, window_size_y)
         pos = imgui.ImVec2(math.random(1, window_size_x), math.random(1, window_size_y)),
         vel = imgui.ImVec2(math.random(-particle_speed*10, particle_speed*10)/10, math.random(-particle_speed*10, particle_speed*10)/10),
         size = math.random(10, 30)/10,
-        color = imgui.ImVec4(math.random(80, 100)/100, math.random(0,20)/100, math.random(0,20)/100, 1.0) -- Tons de vermelho
+        color = imgui.ImVec4(math.random(80, 100)/100, math.random(0,20)/100, math.random(0,20)/100, 1.0)
     }
 end
 
@@ -134,7 +86,7 @@ function draw_particles(draw, window_pos)
 end
 
 function mostrarMensagemCarregamento()
-    local cores = {0xFFFFFFFF, 0xFFAAAAAA, 0xFFFFFFFF, 0xFFAAAAAA} -- Cinza claro e branco para carregamento
+    local cores = {0xFFFFFFFF, 0xFFAAAAAA, 0xFFFFFFFF, 0xFFAAAAAA}
     for i = 1, 4 do
         local cor = cores[(i % #cores) + 1]
         sampAddChatMessage("MOD ATUALIZADUUU BY SHELLDER GOSTOSO", cor)
@@ -222,20 +174,6 @@ imgui.OnFrame(function() return true end, function()
         imgui.Spacing()
         imgui.Separator()
         imgui.Spacing()
-        imgui.TextColored(imgui.ImVec4(0.85,0.85,0.85,1.0), "FRASES GLOBAL - ENVIAR FRASES /ATENDIMENTO")
-        local button_color_frases = frases_global[0] and imgui.ImVec4(0.6, 0.15, 0.15, 1.0) or imgui.ImVec4(0.16, 0.16, 0.16, 1.00)
-        imgui.PushStyleColor(imgui.Col.Button, button_color_frases)
-        if imgui.Button("FRASES GLOBAL", imgui.ImVec2(150,30)) then
-            frases_global[0] = not frases_global[0]
-            if frases_global[0] then
-                sampAddChatMessage("[BY SHELLDER] Ativado com sucesso!", 0xFFFFFF)
-                ultimo_a = os.time()
-            else
-                sampAddChatMessage("[BY SHELLDER] Desativado com sucesso!", 0xFF8B0000)
-            end
-        end
-        imgui.PopStyleColor()
-        imgui.Text(" ")
         imgui.TextColored(imgui.ImVec4(0.85,0.85,0.85,1.0), "ATENDIMENTO AUTOMATICO")
         imgui.Text(" ")
         imgui.Checkbox("AUTO ATENTIMENTO V1", GUI.AutoFila)
@@ -243,19 +181,6 @@ imgui.OnFrame(function() return true end, function()
         imgui.Spacing()
         imgui.Separator()
         imgui.Spacing()
-        imgui.TextColored(imgui.ImVec4(0.85,0.85,0.85,1.0), "Auto Regras - Envia as regras no /a a cada 7 minutos")
-        local button_color_regras = regras_auto[0] and imgui.ImVec4(0.6, 0.15, 0.15, 1.0) or imgui.ImVec4(0.16, 0.16, 0.16, 1.00)
-        imgui.PushStyleColor(imgui.Col.Button, button_color_regras)
-        if imgui.Button("REGRAS SERVER", imgui.ImVec2(150,30)) then
-            regras_auto[0] = not regras_auto[0]
-            if regras_auto[0] then
-                sampAddChatMessage("[BY SHELLDER] Ativado com sucesso!", 0xFFFFFF)
-                ultimo_ac = os.time()
-            else
-                sampAddChatMessage("[BY SHELLDER] Desativado com sucesso!", 0xFF8B0000)
-            end
-        end
-        imgui.PopStyleColor()
         imgui.End()
     end
 end)
@@ -272,28 +197,10 @@ function main()
             elseif not v[0] then
                 particles = {}
             end
-
-            if os.time() - ultimo_envio_a >= intervalo_a then
-                local frase_aleatoria = frases_aleatorias[math.random(1, #frases_aleatorias)]
-                sampSendChat("/a " .. frase_aleatoria)
-                ultimo_envio_a = os.time()
-                sampAddChatMessage("[BY SHELLDER] Frase enviada automaticamente!", 0xFFFFFF)
-            end
+            
             if spam_fila[0] then
                 sampSendChat("/fila")
                 wait(delay_ms[0])
-            end
-            if frases_global[0] and os.time() - ultimo_a >= 600 then
-                ultima_frase = math.random(1, #frases_aleatorias)
-                sampSendChat("/a "..frases_aleatorias[ultima_frase])
-                ultimo_a = os.time()
-            end
-            if regras_auto[0] and os.time() - ultimo_ac >= 420 then
-                local primeira_linha = texto_regras:match("([^\n]+)")
-                if primeira_linha then
-                    sampSendChat("/a "..primeira_linha)
-                end
-                ultimo_ac = os.time()
             end
         end
     end
